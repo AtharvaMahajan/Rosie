@@ -1,0 +1,47 @@
+-- -*- Mode: rpl; -*-                                                                                   
+--
+-- url.rpl    Patterns for matching urls
+--
+-- © Copyright Jamie A. Jennings 2019.
+-- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+-- AUTHOR: Jamie A. Jennings
+
+
+package url
+
+-- url parsing
+
+-- For a regex, see e.g. https://github.com/semver/semver/issues/232#issuecomment-405596809, where
+-- among others, this regex is proposed:
+-- ^(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
+
+local alias protocol = { "http" "s"? "://" }
+local alias web = { "www" [:digit:]? [:digit:]? [:digit:]? "." }
+local alias domain = { [:alnum:]+ "." [:alpha:] [:alpha:] [:alpha:]? [:alpha:]? "/" }
+
+local alias balancedText = [^[:space:] "(" ")" "<" ">"]+
+local alias balancedOneParan = { "(" balancedText ")" }
+local alias balancedTwoParan = { "(" { balancedText / balancedOneParan }* ")" }
+
+local alias endUrl = [[:space:] "(" "[" "]" "{" "}" ";" "." "," ":" "?" "\"" "'" "<" ">" "\xab" "\xbb"]
+
+local alias endUrl1 = [[] "\u201c" "\u201d" "\u2018" "\u2019"]
+
+url = { { protocol / web / domain } { balancedText / balancedTwoParan }+ !<endUrl !<endUrl1}
+
+--test url accepts "www.google.com"
+--test url accepts "https://(foo).com"
+--test url rejects "http://())().com"
+--test url rejects " .com"
+--test url rejects "/com"
+--test url accepts "foo.cn/((done)).m"
+--test url accepts "www999.okaybalan(foo)(bar)"
+--test url accepts "www10.okaythen((thisisrandomtext)).net"
+--test url rejects "www1.okaythen((thisisrandomtext))."
+--test url accepts "www1.okaythen((thisisrandomtext)(seriesof)(oneParan)).com"
+--test url accepts "www1.okaythen((thisisrandomtext)random(text)).com"
+--test url accepts "domain.fo/blah"
+--test url accepts "domain.foo/blah"
+--test url accepts "domain.foob/blah"
+--test url rejects "domain.f/blah"
+--test url rejects "domain.fooba/blah"
